@@ -20,6 +20,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   /**
    * Authentication context provider component
+   * Manages authentication state and provides auth methods
    * @param {Object} props - Component props
    * @param {React.ReactNode} props.children - Child components
    * @returns {React.Component} AuthProvider component
@@ -31,21 +32,35 @@ export const AuthProvider = ({ children }) => {
   // Check authentication status on mount
   useEffect(() => {
     const checkAuth = () => {
-      const authenticated = utils.isAuthenticated();
-      const userSession = utils.getUserSession();
-      
-      setIsAuthenticated(authenticated);
-      setUser(userSession);
-      setLoading(false);
+      try {
+        const authenticated = utils.isAuthenticated();
+        const userSession = utils.getUserSession();
+        
+        setIsAuthenticated(authenticated);
+        setUser(userSession);
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+        setIsAuthenticated(false);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
     checkAuth();
 
     // Set up interval to check token expiration
-    const interval = setInterval(checkAuth, 60000); // Check every minute
+    const interval = setInterval(() => {
+      const authenticated = utils.isAuthenticated();
+      if (!authenticated && isAuthenticated) {
+        // Token has expired, log out user
+        setIsAuthenticated(false);
+        setUser(null);
+      }
+    }, 60000); // Check every minute
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isAuthenticated]);
 
   // PUBLIC_INTERFACE
   const login = async (credentials) => {
@@ -56,12 +71,17 @@ export const AuthProvider = ({ children }) => {
      */
     try {
       const response = await authAPI.login(credentials);
-      setIsAuthenticated(true);
-      setUser({
+      
+      // Set user data
+      const userData = {
         jira_email: credentials.jira_email,
         jira_domain: credentials.jira_domain,
         expires_at: response.expires_at
-      });
+      };
+      
+      setIsAuthenticated(true);
+      setUser(userData);
+      
       return response;
     } catch (error) {
       setIsAuthenticated(false);
@@ -77,6 +97,9 @@ export const AuthProvider = ({ children }) => {
      */
     try {
       await authAPI.logout();
+    } catch (error) {
+      console.error('Logout API error:', error);
+      // Continue with logout even if API call fails
     } finally {
       setIsAuthenticated(false);
       setUser(null);
@@ -93,6 +116,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.refreshSession();
       return response;
     } catch (error) {
+      console.error('Session refresh error:', error);
       setIsAuthenticated(false);
       setUser(null);
       throw error;

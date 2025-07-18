@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 const ProtectedRoute = ({ children }) => {
   /**
    * Protected route component that requires authentication
+   * Redirects to login if not authenticated, shows loading while checking
    * @param {Object} props - Component props
    * @param {React.ReactNode} props.children - Child components to render if authenticated
    * @returns {React.Component} ProtectedRoute component
@@ -15,7 +16,7 @@ const ProtectedRoute = ({ children }) => {
   if (loading) {
     return (
       <div className="loading-container">
-        <div className="loading">Loading...</div>
+        <div className="loading">Verifying authentication...</div>
       </div>
     );
   }

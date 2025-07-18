@@ -10,6 +10,7 @@ import './App.css';
 function App() {
   /**
    * Main application component with routing and authentication
+   * Routes users to login first, then to dashboard after authentication
    * @returns {React.Component} App component
    */
   return (
@@ -26,7 +27,10 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Redirect root to login - user will be redirected to dashboard if already authenticated */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            {/* Catch all other routes and redirect to login */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </div>
       </Router>
