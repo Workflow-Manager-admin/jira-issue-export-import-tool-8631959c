@@ -23,11 +23,16 @@ const Dashboard = () => {
   const loadProjects = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await projectsAPI.getProjects();
-      setProjects(response.projects);
+      setProjects(response.projects || []);
     } catch (error) {
-      setError('Failed to load projects');
       console.error('Error loading projects:', error);
+      setError(
+        error.response?.data?.detail || 
+        error.message || 
+        'Failed to load projects. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -46,13 +51,20 @@ const Dashboard = () => {
       await logout();
     } catch (error) {
       console.error('Logout error:', error);
+      // Even if logout fails on server, we still want to clear local state
     }
+  };
+
+  const handleRetry = () => {
+    loadProjects();
   };
 
   if (loading) {
     return (
       <div className="dashboard">
-        <div className="loading">Loading projects...</div>
+        <div className="loading-container">
+          <div className="loading">Loading projects...</div>
+        </div>
       </div>
     );
   }
@@ -64,8 +76,8 @@ const Dashboard = () => {
           <h1>Jira Issue Export/Import Tool</h1>
         </div>
         <div className="navbar-user">
-          <span>Welcome, {user?.jira_email}</span>
-          <span className="domain">({user?.jira_domain})</span>
+          <span>Welcome, {user?.jira_email || 'User'}</span>
+          <span className="domain">({user?.jira_domain || 'Domain'})</span>
           <button onClick={handleLogout} className="btn btn-secondary">
             Logout
           </button>
@@ -76,6 +88,9 @@ const Dashboard = () => {
         {error && (
           <div className="error-message">
             {error}
+            <button onClick={handleRetry} className="btn btn-primary" style={{ marginLeft: '1rem' }}>
+              Retry
+            </button>
           </div>
         )}
         
@@ -84,6 +99,7 @@ const Dashboard = () => {
             projects={projects} 
             onProjectSelect={handleProjectSelect}
             onRefresh={loadProjects}
+            loading={loading}
           />
         ) : (
           <ProjectDetails 

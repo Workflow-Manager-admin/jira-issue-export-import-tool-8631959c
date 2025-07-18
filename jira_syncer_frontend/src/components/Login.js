@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 const Login = () => {
   /**
    * Login form component for Jira authentication
+   * Automatically redirects to dashboard if user is already authenticated
    * @returns {React.Component} Login component
    */
   const [formData, setFormData] = useState({
@@ -15,14 +16,39 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="loading-container">
+        <div className="loading">Checking authentication...</div>
+      </div>
+    );
+  }
+
+  // Don't render login form if already authenticated
+  if (isAuthenticated) {
+    return null;
+  }
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    // Clear error when user starts typing
+    if (error) {
+      setError('');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -30,11 +56,23 @@ const Login = () => {
     setLoading(true);
     setError('');
 
+    // Basic validation
+    if (!formData.jira_email || !formData.jira_token || !formData.jira_domain) {
+      setError('All fields are required');
+      setLoading(false);
+      return;
+    }
+
     try {
       await login(formData);
-      navigate('/dashboard');
+      // Navigation will be handled by useEffect when isAuthenticated changes
     } catch (error) {
-      setError(error.response?.data?.detail || 'Login failed');
+      console.error('Login error:', error);
+      setError(
+        error.response?.data?.detail || 
+        error.message || 
+        'Login failed. Please check your credentials and try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -63,6 +101,7 @@ const Login = () => {
               onChange={handleChange}
               required
               placeholder="your.email@company.com"
+              disabled={loading}
             />
           </div>
           
@@ -76,6 +115,7 @@ const Login = () => {
               onChange={handleChange}
               required
               placeholder="Your Jira API token"
+              disabled={loading}
             />
           </div>
           
@@ -89,11 +129,12 @@ const Login = () => {
               onChange={handleChange}
               required
               placeholder="company.atlassian.net"
+              disabled={loading}
             />
           </div>
           
-          <button type="submit" disabled={loading} className="btn btn-primary">
-            {loading ? 'Logging in...' : 'Login'}
+          <button type="submit" disabled={loading} className="btn btn-primary btn-large">
+            {loading ? 'Authenticating...' : 'Login'}
           </button>
         </form>
         
