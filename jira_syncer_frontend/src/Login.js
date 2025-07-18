@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from './context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { utils } from './services/api';
 
 // PUBLIC_INTERFACE
 const Login = () => {
@@ -64,15 +65,33 @@ const Login = () => {
     }
 
     try {
+      // Test backend connection first
+      const isConnected = await utils.testConnection();
+      if (!isConnected) {
+        setError(`Unable to connect to backend server (${utils.getApiBaseUrl()}). Please check if the server is running.`);
+        setLoading(false);
+        return;
+      }
+
       await login(formData);
       // Navigation will be handled by useEffect when isAuthenticated changes
     } catch (error) {
       console.error('Login error:', error);
-      setError(
-        error.response?.data?.detail || 
-        error.message || 
-        'Login failed. Please check your credentials and try again.'
-      );
+      
+      // Handle different types of errors
+      if (error.isNetworkError) {
+        setError(`Network Error: ${error.message}`);
+      } else if (error.isServiceError) {
+        setError(`Service Error: ${error.message}`);
+      } else if (error.isServerError) {
+        setError(`Server Error: ${error.message}`);
+      } else {
+        setError(
+          error.response?.data?.detail || 
+          error.message || 
+          'Login failed. Please check your credentials and try again.'
+        );
+      }
     } finally {
       setLoading(false);
     }

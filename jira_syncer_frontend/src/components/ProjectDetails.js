@@ -15,7 +15,7 @@ const ProjectDetails = ({ project, onBack }) => {
 
   useEffect(() => {
     loadIssueTypes();
-  }, [project]);
+  }, [project]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadIssueTypes = async () => {
     try {
